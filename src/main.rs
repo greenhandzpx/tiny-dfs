@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 mod naming;
 mod storage;
@@ -10,7 +11,5 @@ fn hello(name: &str, age: u8) -> String {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build()
-        .mount("/hello", routes![hello])
-        
+    rocket::build().mount("/hello", routes![hello])
 }

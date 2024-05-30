@@ -3,7 +3,7 @@ use std::sync::Arc;
 use once_cell::sync::Lazy;
 use rocket::tokio::sync::Mutex;
 
-use super::server::StorageServer;
+use super::{error::NamingError, server::StorageServer};
 
 enum File {
     RegFile(RegFile),
@@ -24,11 +24,27 @@ impl File {
             File::Dir(f) => f.lookup(child).await
         }
     }
+
+    async fn create_file(&self, child: &str, is_dir: bool, srv: Option<&Arc<StorageServer>>) {
+        match self {
+            File::RegFile(_) => panic!(),
+            File::Dir(f) => f.create_file(child, is_dir, srv).await,
+        }
+    }
 }
 
 struct RegFile {
     srv: Arc<StorageServer>,
     name: String,
+}
+
+impl RegFile {
+    fn new(name: &str, srv: &Arc<StorageServer>) -> Self {
+        Self {
+            srv: srv.clone(),
+            name: name.to_string(),
+        }
+    }
 }
 
 struct Dir {
@@ -37,10 +53,10 @@ struct Dir {
 }
 
 impl Dir {
-    fn new(name: String) -> Self {
+    fn new(name: &str) -> Self {
         Self {
             children: Mutex::new(Vec::new()),
-            name,
+            name: name.to_string(),
         }
     }
 
@@ -56,12 +72,21 @@ impl Dir {
         assert!(matched.len() <= 1);
         matched.pop()
     }
+
+    async fn create_file(&self, child: &str, is_dir: bool, srv: Option<&Arc<StorageServer>>) {
+        let file = if is_dir {
+            Arc::new(File::Dir(Dir::new(child)))
+        } else {
+            Arc::new(File::RegFile(RegFile::new(child, srv.unwrap())))
+        };
+        self.children.lock().await.push(file);
+    }
 }
 
-static ROOT_DIR: Lazy<Arc<File>> = Lazy::new(|| Arc::new(File::Dir(Dir::new("/".to_string()))));
+static ROOT_DIR: Lazy<Arc<File>> = Lazy::new(|| Arc::new(File::Dir(Dir::new("/"))));
 
 /// Return parent dir and target file (if any)
-async fn lookup(path: String) -> (Option<Arc<File>>, Option<Arc<File>>) {
+async fn lookup(path: &str) -> (Option<Arc<File>>, Option<Arc<File>>) {
 
     let split_path: Vec<&str> = path.split("/").collect();
     let mut parent_dir = ROOT_DIR.clone();
@@ -85,11 +110,50 @@ async fn lookup(path: String) -> (Option<Arc<File>>, Option<Arc<File>>) {
     panic!()
 }
 
+async fn create_file(path: &str, is_dir: bool, srv: Option<&Arc<StorageServer>>, auto_create: bool) -> Result<(), NamingError> {
+
+    let split_path: Vec<&str> = path.split("/").collect();
+    let mut parent_dir = ROOT_DIR.clone();
+
+    for (i, name) in split_path.iter().enumerate() {
+        let target = parent_dir.lookup(name).await;
+        if target.is_some() {
+            if i != split_path.len() - 1 {
+                parent_dir = target.unwrap(); 
+            } else {
+                // The new file has existed
+                return Err(NamingError::FileExists);
+            }
+        } else {
+            if i == split_path.len() - 1 {
+                parent_dir.create_file(name, is_dir, srv).await;
+                return Ok(());
+            } else {
+                // Cannot find the intermediate one
+                if !auto_create {
+                    return Err(NamingError::DirNotFound);
+                }
+                parent_dir.create_file(name, true, None).await;
+                parent_dir = parent_dir.lookup(name).await.unwrap();
+            }
+        }
+    }
+    panic!()
+}
+
 fn retrive_duplicated_files(files: Vec<String>) -> Vec<String> {
     todo!()
 }
 
-pub fn collect_files(files: Vec<String>) -> Vec<String> {
-    
-    todo!()
+pub async fn collect_files(files: Vec<String>, srv: &Arc<StorageServer>) -> Result<Vec<String>, NamingError> {
+    let mut duplicated_files: Vec<String> = Vec::new();
+    for file in files {
+        let (_, target) = lookup(&file).await;
+        if target.is_some() {
+            duplicated_files.push(file.clone());
+            continue
+        }
+        create_file(&file, false, Some(srv), true).await?;
+    } 
+    Ok(duplicated_files)
 }

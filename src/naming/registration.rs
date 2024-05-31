@@ -7,13 +7,13 @@ use rocket::serde::{Deserialize, Serialize};
 
 use crate::naming::Ip;
 
+use super::dir_tree::collect_files;
 use super::server::{self, StorageServer};
 
-fn register_file(file: String, srv: &Arc<StorageServer>) {}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
-struct RegisterArg {
+pub struct RegisterArg {
     // TODO: &str or string ?
     storage_ip: String,
     // TODO: not sure the size
@@ -23,27 +23,22 @@ struct RegisterArg {
 }
 
 #[derive(Responder)]
-enum RegisterResponse {
+pub enum RegisterResponse {
     OkResp(Json<RegisterOkResponse>),
     ErrResp(Json<RegisterErrResponse>),
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
-struct RegisterOkResponse {
+pub struct RegisterOkResponse {
     files: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
-struct RegisterErrResponse {
+pub struct RegisterErrResponse {
     exception_type: String,
     exception_info: String,
-}
-
-/// Collect necessary files and retrive all duplicated ones
-fn collect_files(files: &Vec<String>) -> Vec<String> {
-    todo!()
 }
 
 #[post("/register", data = "<arg>")]
@@ -53,7 +48,7 @@ pub async fn register_storage_server(arg: Json<RegisterArg>) -> (Status, Registe
         arg.client_port,
         arg.command_port,
     ));
-    if server::register_server(srv).await.is_err() {
+    if server::register_server(&srv).await.is_err() {
         return (
             Status::Conflict,
             RegisterResponse::ErrResp(
@@ -65,7 +60,7 @@ pub async fn register_storage_server(arg: Json<RegisterArg>) -> (Status, Registe
             ),
         );
     }
-    let duplicated_files = collect_files(&arg.files);
+    let duplicated_files = collect_files(&arg.files, &srv).await.unwrap();
     (
         Status::Ok,
         RegisterResponse::OkResp(

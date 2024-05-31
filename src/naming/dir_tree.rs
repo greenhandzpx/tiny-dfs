@@ -115,6 +115,7 @@ async fn create_file(path: &str, is_dir: bool, srv: Option<&Arc<StorageServer>>,
     let split_path: Vec<&str> = path.split("/").collect();
     let mut parent_dir = ROOT_DIR.clone();
 
+    log::debug!("path {:?}, is_dir {:?}, auto_create {:?}", path, is_dir, auto_create);
     for (i, name) in split_path.iter().enumerate() {
         let target = parent_dir.lookup(name).await;
         if target.is_some() {
@@ -122,6 +123,7 @@ async fn create_file(path: &str, is_dir: bool, srv: Option<&Arc<StorageServer>>,
                 parent_dir = target.unwrap(); 
             } else {
                 // The new file has existed
+                log::warn!("Path {:?} has existed", path);
                 return Err(NamingError::FileExists);
             }
         } else {
@@ -131,6 +133,7 @@ async fn create_file(path: &str, is_dir: bool, srv: Option<&Arc<StorageServer>>,
             } else {
                 // Cannot find the intermediate one
                 if !auto_create {
+                    log::warn!("Dir {:?} in Path {:?} not found", name, path);
                     return Err(NamingError::DirNotFound);
                 }
                 parent_dir.create_file(name, true, None).await;
@@ -141,11 +144,8 @@ async fn create_file(path: &str, is_dir: bool, srv: Option<&Arc<StorageServer>>,
     panic!()
 }
 
-fn retrive_duplicated_files(files: Vec<String>) -> Vec<String> {
-    todo!()
-}
-
-pub async fn collect_files(files: Vec<String>, srv: &Arc<StorageServer>) -> Result<Vec<String>, NamingError> {
+/// Collect necessary files and retrive all duplicated ones
+pub async fn collect_files(files: &Vec<String>, srv: &Arc<StorageServer>) -> Result<Vec<String>, NamingError> {
     let mut duplicated_files: Vec<String> = Vec::new();
     for file in files {
         let (_, target) = lookup(&file).await;

@@ -32,11 +32,11 @@ impl ServerManager {
         }
     }
 
-    fn register_server(&mut self, srv: Arc<StorageServer>) -> Result<(), NamingError> {
+    fn register_server(&mut self, srv: &Arc<StorageServer>) -> Result<(), NamingError> {
         if self.servers.contains_key(&srv.ip) {
             Err(NamingError::ServerExists)
         } else {
-            self.servers.insert(srv.ip.clone(), srv);
+            self.servers.insert(srv.ip.clone(), srv.clone());
             Ok(())
         }
     }
@@ -44,6 +44,6 @@ impl ServerManager {
 
 static SERVER_MANAGER: Lazy<Mutex<ServerManager>> = Lazy::new(|| Mutex::new(ServerManager::new()));
 
-pub async fn register_server(srv: Arc<StorageServer>) -> Result<(), NamingError> {
+pub async fn register_server(srv: &Arc<StorageServer>) -> Result<(), NamingError> {
     SERVER_MANAGER.lock().await.register_server(srv)
 }

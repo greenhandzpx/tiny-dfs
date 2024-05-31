@@ -6,3 +6,5 @@ mod service;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
 struct Ip(String);
+
+pub use registration::register_storage_server;

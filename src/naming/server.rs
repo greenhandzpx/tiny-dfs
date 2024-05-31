@@ -3,7 +3,9 @@ use std::{collections::BTreeMap, sync::Arc};
 use once_cell::sync::Lazy;
 use rocket::tokio::sync::Mutex;
 
-use super::{error::NamingError, Ip};
+use crate::common::error::TinyDfsError;
+
+use super::Ip;
 
 pub struct StorageServer {
     ip: Ip,
@@ -32,9 +34,9 @@ impl ServerManager {
         }
     }
 
-    fn register_server(&mut self, srv: &Arc<StorageServer>) -> Result<(), NamingError> {
+    fn register_server(&mut self, srv: &Arc<StorageServer>) -> Result<(), TinyDfsError> {
         if self.servers.contains_key(&srv.ip) {
-            Err(NamingError::ServerExists)
+            Err(TinyDfsError::StorageServerExists)
         } else {
             self.servers.insert(srv.ip.clone(), srv.clone());
             Ok(())
@@ -44,6 +46,6 @@ impl ServerManager {
 
 static SERVER_MANAGER: Lazy<Mutex<ServerManager>> = Lazy::new(|| Mutex::new(ServerManager::new()));
 
-pub async fn register_server(srv: &Arc<StorageServer>) -> Result<(), NamingError> {
+pub async fn register_server(srv: &Arc<StorageServer>) -> Result<(), TinyDfsError> {
     SERVER_MANAGER.lock().await.register_server(srv)
 }

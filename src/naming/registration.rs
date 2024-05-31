@@ -3,42 +3,17 @@ use std::sync::Arc;
 use rocket;
 use rocket::http::Status;
 use rocket::serde::json::Json;
-use rocket::serde::{Deserialize, Serialize};
 
+use crate::common::registration::{RegisterArg, RegisterErrResponse, RegisterOkResponse};
 use crate::naming::Ip;
 
 use super::dir_tree::collect_files;
 use super::server::{self, StorageServer};
 
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct RegisterArg {
-    // TODO: &str or string ?
-    storage_ip: String,
-    // TODO: not sure the size
-    client_port: u16,
-    command_port: u16,
-    files: Vec<String>,
-}
-
 #[derive(Responder)]
 pub enum RegisterResponse {
     OkResp(Json<RegisterOkResponse>),
     ErrResp(Json<RegisterErrResponse>),
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct RegisterOkResponse {
-    files: Vec<String>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct RegisterErrResponse {
-    exception_type: String,
-    exception_info: String,
 }
 
 #[post("/register", data = "<arg>")]

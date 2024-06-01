@@ -12,7 +12,10 @@ pub async fn is_valid_path(arg: Json<IsValidPathArg>) -> (Status, Json<IsValidPa
 
     let (_, target) = dir_tree::lookup(path).await;
     if target.is_some() {
+        log::debug!("path {:?} is valid", path);
         resp.success = true;
+    } else {
+        log::debug!("path {:?} isn't valid", path);
     }
     (Status::Ok, resp.into())
 }

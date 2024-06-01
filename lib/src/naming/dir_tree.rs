@@ -99,7 +99,7 @@ pub async fn lookup(path: &str) -> (Option<Arc<File>>, Option<Arc<File>>) {
                 parent_dir = target.unwrap();
             } else {
                 return (Some(parent_dir), target);
-           }
+            }
         } else {
             if i == split_path.len() - 1 {
                 return (Some(parent_dir), None);

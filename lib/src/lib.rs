@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate rocket;
 
-mod common;
+pub mod common;
 mod naming;
 mod storage;
 

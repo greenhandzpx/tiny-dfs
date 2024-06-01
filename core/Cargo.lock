@@ -1654,6 +1654,7 @@ dependencies = [
  "once_cell",
  "reqwest",
  "rocket",
+ "tokio",
 ]
 
 [[package]]

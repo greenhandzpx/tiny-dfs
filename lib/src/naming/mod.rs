@@ -9,8 +9,9 @@ mod service;
 struct Ip(String);
 
 use registration::register_storage_server;
+use service::is_valid_path;
 
-pub async fn init(args: &Vec<String>) {
+pub async fn start_naming_server(args: &Vec<String>) {
     let service_port = args[2].parse::<u16>().unwrap();
     let registration_port = args[3].parse::<u16>().unwrap();
 
@@ -26,6 +27,7 @@ pub async fn init(args: &Vec<String>) {
     let service_task = rocket::tokio::spawn(async move {
         rocket::build()
             .configure(service_config)
+            .mount("/", routes![is_valid_path]) 
             // .mount("/test", routes![hello])
             .launch()
             .await

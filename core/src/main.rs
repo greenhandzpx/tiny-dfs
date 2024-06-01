@@ -1,23 +1,9 @@
-#[macro_use]
-extern crate rocket;
-
-use env_logger;
-
-mod common;
-mod naming;
-mod storage;
-
-// #[get("/<name>/<age>")]
-// fn hello(name: &str, age: u8) -> String {
-//     format!("Hello, {} year old named {}!", age, name)
-// }
-
 async fn start_naming_server(args: &Vec<String>) {
     if args.len() != 4 {
         panic!();
     }
 
-    naming::init(args).await;
+    tiny_dfs::start_naming_server(args).await;
 }
 
 async fn start_storage_server(args: &Vec<String>) {
@@ -25,8 +11,7 @@ async fn start_storage_server(args: &Vec<String>) {
         panic!();
     }
 
-    storage::init(args).await;
-    // todo!()
+    tiny_dfs::start_storage_server(args).await;
 }
 
 #[rocket::main]
@@ -49,3 +34,5 @@ async fn main() {
         panic!();
     }
 }
+
+

@@ -7,7 +7,7 @@ use crate::common::error::TinyDfsError;
 
 use super::server::StorageServer;
 
-enum File {
+pub enum File {
     RegFile(RegFile),
     Dir(Dir),
 }
@@ -35,7 +35,7 @@ impl File {
     }
 }
 
-struct RegFile {
+pub struct RegFile {
     srv: Arc<StorageServer>,
     name: String,
 }
@@ -49,7 +49,7 @@ impl RegFile {
     }
 }
 
-struct Dir {
+pub struct Dir {
     children: Mutex<Vec<Arc<File>>>,
     name: String,
 }
@@ -88,7 +88,7 @@ impl Dir {
 static ROOT_DIR: Lazy<Arc<File>> = Lazy::new(|| Arc::new(File::Dir(Dir::new("/"))));
 
 /// Return parent dir and target file (if any)
-async fn lookup(path: &str) -> (Option<Arc<File>>, Option<Arc<File>>) {
+pub async fn lookup(path: &str) -> (Option<Arc<File>>, Option<Arc<File>>) {
     let split_path: Vec<&str> = path.split("/").collect();
     let mut parent_dir = ROOT_DIR.clone();
 
@@ -99,7 +99,7 @@ async fn lookup(path: &str) -> (Option<Arc<File>>, Option<Arc<File>>) {
                 parent_dir = target.unwrap();
             } else {
                 return (Some(parent_dir), target);
-            }
+           }
         } else {
             if i == split_path.len() - 1 {
                 return (Some(parent_dir), None);

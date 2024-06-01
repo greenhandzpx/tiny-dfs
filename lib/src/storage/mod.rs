@@ -74,7 +74,7 @@ async fn regsiter_myself(registration_port: u16) -> Result<(), TinyDfsError> {
 }
 
 /// args: Command line args
-pub async fn init(args: &Vec<String>) {
+pub async fn start_storage_server(args: &Vec<String>) {
     let client_port = args[2].parse::<u16>().unwrap();
     let command_port = args[3].parse::<u16>().unwrap();
     let registration_port = args[4].parse::<u16>().unwrap();

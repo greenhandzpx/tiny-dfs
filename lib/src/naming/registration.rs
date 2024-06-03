@@ -4,7 +4,8 @@ use rocket;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 
-use crate::common::registration::{RegisterArg, RegisterErrResponse, RegisterOkResponse};
+use crate::common::error::ErrResponse;
+use crate::common::registration::{RegisterArg, RegisterOkResponse};
 use crate::naming::Ip;
 
 use super::dir_tree::collect_files;
@@ -13,7 +14,7 @@ use super::server::{self, StorageServer};
 #[derive(Responder)]
 pub enum RegisterResponse {
     OkResp(Json<RegisterOkResponse>),
-    ErrResp(Json<RegisterErrResponse>),
+    ErrResp(Json<ErrResponse>),
 }
 
 #[post("/register", data = "<arg>")]
@@ -27,7 +28,7 @@ pub async fn register_storage_server(arg: Json<RegisterArg>) -> (Status, Registe
         return (
             Status::Conflict,
             RegisterResponse::ErrResp(
-                RegisterErrResponse {
+                ErrResponse {
                     exception_type: "IllegalStateException".to_string(),
                     exception_info: "This storage client already registered.".to_string(),
                 }

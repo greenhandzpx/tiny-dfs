@@ -15,10 +15,3 @@ pub struct RegisterArg {
 pub struct RegisterOkResponse {
     pub files: Vec<String>,
 }
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct RegisterErrResponse {
-    pub exception_type: String,
-    pub exception_info: String,
-}

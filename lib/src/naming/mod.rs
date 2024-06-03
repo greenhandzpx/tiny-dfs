@@ -5,11 +5,13 @@ mod registration;
 mod server;
 mod service;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
-struct Ip(String);
-
 use registration::register_storage_server;
-use service::is_valid_path;
+use rocket::serde::{Deserialize, Serialize};
+use service::{delete_file, get_storage_server, is_valid_path};
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Deserialize, Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct Ip(String);
 
 /// args[2]: service port;
 /// args[3]: registration port
@@ -31,6 +33,8 @@ pub async fn start_naming_server(args: &Vec<String>) {
         rocket::build()
             .configure(service_config)
             .mount("/", routes![is_valid_path])
+            .mount("/", routes![get_storage_server])
+            .mount("/", routes![delete_file])
             // .mount("/test", routes![hello])
             .launch()
             .await

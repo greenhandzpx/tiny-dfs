@@ -8,9 +8,9 @@ use crate::common::error::TinyDfsError;
 use super::Ip;
 
 pub struct StorageServer {
-    ip: Ip,
-    client_port: u16,
-    command_port: u16,
+    pub ip: Ip,
+    pub client_port: u16,
+    pub command_port: u16,
 }
 
 impl StorageServer {

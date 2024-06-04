@@ -46,3 +46,21 @@ pub enum DeleteResponse {
     OkResp(Json<DeleteOkResponse>),
     ErrResp(Json<ErrResponse>),
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct CreateDirectoryArg {
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct CreateDirectoryOkResponse {
+    pub success: bool,
+}
+
+#[derive(Responder)]
+pub enum CreateDirectoryResponse {
+    OkResp(Json<CreateDirectoryOkResponse>),
+    ErrResp(Json<ErrResponse>),
+}

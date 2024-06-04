@@ -138,23 +138,34 @@ impl From<WalkDirTreeTarget> for Option<Arc<File>> {
 }
 
 /// cb: callback for parent dir and target file
-async fn walk_dir_tree<F, Fut, T>(path: &str, option: WalkDirTreeOption, cb: F) -> T
+async fn walk_dir_tree<F, Fut, T>(
+    path: &str,
+    option: WalkDirTreeOption,
+    cb: F,
+) -> Result<T, TinyDfsError>
 where
     F: Fn(Option<Arc<File>>, WalkDirTreeTarget) -> Fut,
     Fut: Future<Output = T>,
 {
+    if path.is_empty() || path.chars().nth(0).unwrap() != '/' {
+        return Err(TinyDfsError::PathInvalid);
+    }
     let split_path: Vec<&str> = path.split("/").collect();
     let mut parent_dir = ROOT_DIR.clone();
-
     for (i, name) in split_path.iter().enumerate() {
+        if (*name).eq("") {
+            continue;
+        }
+        // println!("------------------{} name {} ---------------------", i, name);
         let mut target = parent_dir.lookup(name).await;
         if target.is_some() {
             if i != split_path.len() - 1 {
                 parent_dir = target.unwrap();
             } else {
-                return cb(Some(parent_dir), WalkDirTreeTarget::from_file(target, None)).await;
+                return Ok(cb(Some(parent_dir), WalkDirTreeTarget::from_file(target, None)).await);
             }
         } else {
+            // println!("------------------{} name {} cannot find the target ---------------------", i, name);
             if i == split_path.len() - 1 {
                 // Cannot find the target
                 if option.create_target {
@@ -162,21 +173,21 @@ where
                     target = parent_dir.lookup(name).await;
                 }
                 let name = if option.need_target_name {
-                    Some(name.clone().to_owned())
+                    Some((*name).to_owned())
                 } else {
                     None
                 };
-                return cb(Some(parent_dir), WalkDirTreeTarget::from_file(None, name)).await;
+                return Ok(cb(Some(parent_dir), WalkDirTreeTarget::from_file(target, name)).await);
             } else {
                 // Cannot find the intermediate one
                 if !option.create_inter_one {
                     log::info!("Dir {:?} in Path {:?} not found", name, path);
                     let name = if option.need_target_name {
-                        Some(name.clone().to_owned())
+                        Some((*name).to_owned())
                     } else {
                         None
                     };
-                    return cb(None, WalkDirTreeTarget::from_file(None, name)).await;
+                    return Ok(cb(None, WalkDirTreeTarget::from_file(None, name)).await);
                 }
                 parent_dir.create_file(name, true, None).await;
                 parent_dir = parent_dir.lookup(name).await.unwrap();
@@ -187,7 +198,7 @@ where
 }
 
 /// Return parent dir and target file (if any)
-pub async fn lookup(path: &str) -> (Option<Arc<File>>, Option<Arc<File>>) {
+pub async fn lookup(path: &str) -> Result<(Option<Arc<File>>, Option<Arc<File>>), TinyDfsError> {
     walk_dir_tree(
         path,
         WalkDirTreeOption::default(),
@@ -216,10 +227,10 @@ pub async fn delete_file(path: &str) -> Result<Arc<File>, TinyDfsError> {
             }
         },
     )
-    .await
+    .await?
 }
 
-async fn create_file(
+pub async fn create_file(
     path: &str,
     is_dir: bool,
     srv: Option<&Arc<StorageServer>>,
@@ -260,7 +271,7 @@ async fn create_file(
             }
         },
     )
-    .await
+    .await?
 }
 
 /// Collect necessary files and retrive all duplicated ones
@@ -270,7 +281,7 @@ pub async fn collect_files(
 ) -> Result<Vec<String>, TinyDfsError> {
     let mut duplicated_files: Vec<String> = Vec::new();
     for file in files {
-        let (_, target) = lookup(&file).await;
+        let (_, target) = lookup(&file).await?;
         if target.is_some() {
             duplicated_files.push(file.clone());
             continue;

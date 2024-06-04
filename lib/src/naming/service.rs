@@ -6,8 +6,9 @@ use crate::{
     common::{
         error::ErrResponse,
         service::{
-            DeleteArg, DeleteOkResponse, DeleteResponse, GetStorageArg, GetStorageOkResponse,
-            IsValidPathArg, IsValidPathResponse,
+            CreateDirectoryArg, CreateDirectoryResponse, DeleteArg, DeleteOkResponse,
+            DeleteResponse, GetStorageArg, GetStorageOkResponse, IsValidPathArg,
+            IsValidPathResponse,
         },
     },
     naming::dir_tree,
@@ -20,12 +21,14 @@ pub async fn is_valid_path(arg: Json<IsValidPathArg>) -> (Status, Json<IsValidPa
     let path = &arg.path;
     let mut resp = IsValidPathResponse { success: false };
 
-    let (_, target) = dir_tree::lookup(path).await;
-    if target.is_some() {
-        log::debug!("path {:?} is valid", path);
-        resp.success = true;
-    } else {
-        log::debug!("path {:?} isn't valid", path);
+    let res = dir_tree::lookup(path).await;
+    if let Some((_, target)) = res.ok() {
+        if target.is_some() {
+            log::debug!("path {:?} is valid", path);
+            resp.success = true;
+        } else {
+            log::debug!("path {:?} isn't valid", path);
+        }
     }
     (Status::Ok, resp.into())
 }
@@ -43,7 +46,20 @@ fn select_one_server(srvs: &mut Vec<Arc<StorageServer>>) -> Arc<StorageServer> {
 
 #[post("/getstorage", data = "<arg>")]
 pub async fn get_storage_server(arg: Json<GetStorageArg>) -> (Status, GetStorageResponse) {
-    let (_, target) = dir_tree::lookup(&arg.path).await;
+    let res = dir_tree::lookup(&arg.path).await;
+    if res.is_err() {
+        return (
+            Status::NotFound,
+            GetStorageResponse::ErrResp(
+                ErrResponse {
+                    exception_type: "FileNotFoundException".to_string(),
+                    exception_info: format!("{} is invalid", &arg.path),
+                }
+                .into(),
+            ),
+        );
+    }
+    let (_, target) = res.ok().unwrap();
     if let Some(target) = target {
         let srv = target.for_all_servers(select_one_server);
         (
@@ -113,3 +129,9 @@ pub async fn delete_file(arg: Json<DeleteArg>) -> (Status, DeleteResponse) {
         )
     }
 }
+
+// #[post("/create_directory", data = "<arg>")]
+// pub async fn create_directory(arg: Json<CreateDirectoryArg>) -> (Status, CreateDirectoryResponse) {
+//     dir_tree::create_file(&arg.path, true, , )
+//     todo!()
+// }

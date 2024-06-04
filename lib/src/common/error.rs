@@ -8,6 +8,7 @@ pub enum TinyDfsError {
     DirNotFound,
     DirReadErr,
     RegisterFailed,
+    PathInvalid,
     // TODO
 }
 

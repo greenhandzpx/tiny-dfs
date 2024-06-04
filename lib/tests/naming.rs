@@ -91,7 +91,6 @@ async fn test_delete_file() {
 
     sleep(Duration::from_millis(300)).await;
 
-
     log::info!("start to verify path 1...");
     // Verify that the newly created file exists in the naming server
     let arg = IsValidPathArg {
@@ -104,7 +103,6 @@ async fn test_delete_file() {
     let resp: IsValidPathResponse = resp.json().await.unwrap();
     assert!(resp.success);
 
-
     log::info!("start to delete file...");
     let arg = DeleteArg {
         path: new_file.to_string(),
@@ -115,7 +113,6 @@ async fn test_delete_file() {
     assert!(resp.status().is_success());
     let resp: IsValidPathResponse = resp.json().await.unwrap();
     assert!(resp.success);
-
 
     log::info!("start to verify path 2...");
     // Verify that the file has been deleted in the naming server
@@ -128,7 +125,4 @@ async fn test_delete_file() {
     assert!(resp.status().is_success());
     let resp: IsValidPathResponse = resp.json().await.unwrap();
     assert!(!resp.success);
-
-
 }
-    

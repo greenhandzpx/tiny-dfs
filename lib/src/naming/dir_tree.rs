@@ -245,7 +245,7 @@ pub async fn create_file(
     walk_dir_tree(
         path,
         WalkDirTreeOption {
-            create_inter_one: true,
+            create_inter_one: create_missing_one,
             create_target: false,
             need_target_name: true,
         },

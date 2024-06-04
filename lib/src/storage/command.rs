@@ -34,3 +34,6 @@ pub fn delete_file(arg: Json<DeleteArg>) -> (Status, DeleteResponse) {
         )
     }
 }
+
+// #[post("/storage_create", data = "<arg>")]
+// pub fn create_file(arg: Json<C)

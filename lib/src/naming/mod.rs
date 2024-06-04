@@ -7,7 +7,7 @@ mod service;
 
 use registration::register_storage_server;
 use rocket::serde::{Deserialize, Serialize};
-use service::{delete_file, get_storage_server, is_valid_path};
+use service::{create_directory, delete_file, get_storage_server, is_valid_path};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -32,9 +32,15 @@ pub async fn start_naming_server(args: &Vec<String>) {
     let service_task = rocket::tokio::spawn(async move {
         rocket::build()
             .configure(service_config)
-            .mount("/", routes![is_valid_path])
-            .mount("/", routes![get_storage_server])
-            .mount("/", routes![delete_file])
+            .mount(
+                "/",
+                routes![
+                    is_valid_path,
+                    get_storage_server,
+                    delete_file,
+                    create_directory
+                ],
+            )
             // .mount("/test", routes![hello])
             .launch()
             .await

@@ -6,8 +6,8 @@ use crate::{
     common::{
         error::ErrResponse,
         service::{
-            CreateDirectoryArg, CreateDirectoryResponse, DeleteArg, DeleteOkResponse,
-            DeleteResponse, GetStorageArg, GetStorageOkResponse, IsValidPathArg,
+            CreateDirectoryArg, CreateDirectoryOkResponse, CreateDirectoryResponse, DeleteArg,
+            DeleteOkResponse, DeleteResponse, GetStorageArg, GetStorageOkResponse, IsValidPathArg,
             IsValidPathResponse,
         },
     },
@@ -130,8 +130,27 @@ pub async fn delete_file(arg: Json<DeleteArg>) -> (Status, DeleteResponse) {
     }
 }
 
-// #[post("/create_directory", data = "<arg>")]
-// pub async fn create_directory(arg: Json<CreateDirectoryArg>) -> (Status, CreateDirectoryResponse) {
-//     dir_tree::create_file(&arg.path, true, , )
-//     todo!()
-// }
+#[post("/create_directory", data = "<arg>")]
+pub async fn create_directory(arg: Json<CreateDirectoryArg>) -> (Status, CreateDirectoryResponse) {
+    match dir_tree::create_file(&arg.path, true, None, false).await {
+        Err(err) => {
+            let (status, exception_type, exception_info) = err.exception();
+            return (
+                status,
+                CreateDirectoryResponse::ErrResp(
+                    ErrResponse {
+                        exception_type: exception_type.to_string(),
+                        exception_info: exception_info.to_string(),
+                    }
+                    .into(),
+                ),
+            );
+        }
+        Ok(_) => {
+            return (
+                Status::Ok,
+                CreateDirectoryResponse::OkResp(CreateDirectoryOkResponse { success: true }.into()),
+            )
+        }
+    }
+}

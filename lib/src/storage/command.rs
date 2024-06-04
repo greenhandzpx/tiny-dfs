@@ -4,8 +4,8 @@ use rocket::{http::Status, serde::json::Json};
 
 use crate::{
     common::{
-        error::ErrResponse,
-        service::{DeleteArg, DeleteOkResponse, DeleteResponse},
+        service::{CreateFileArg, CreateFileResponse, DeleteArg, DeleteResponse},
+        ErrResponse, OkResponse,
     },
     storage::path,
 };
@@ -19,7 +19,7 @@ pub fn delete_file(arg: Json<DeleteArg>) -> (Status, DeleteResponse) {
     if fs::remove_file(local_path).is_ok() {
         (
             Status::Ok,
-            DeleteResponse::OkResp(DeleteOkResponse { success: true }.into()),
+            DeleteResponse::OkResp(OkResponse { success: true }.into()),
         )
     } else {
         (
@@ -35,5 +35,32 @@ pub fn delete_file(arg: Json<DeleteArg>) -> (Status, DeleteResponse) {
     }
 }
 
-// #[post("/storage_create", data = "<arg>")]
-// pub fn create_file(arg: Json<C)
+#[post("/storage_create", data = "<arg>")]
+pub fn create_file(arg: Json<CreateFileArg>) -> (Status, CreateFileResponse) {
+    let global_path: &str = &arg.path;
+    let local_path = path::global_to_local(global_path);
+
+    log::info!("create_file: local path {:?}", local_path);
+    // Also create the missing intermediate ones
+    let local_path = std::path::Path::new(&local_path);
+    if let Some(parent_dir) = local_path.parent() {
+        fs::create_dir_all(parent_dir).unwrap();
+    }
+    if fs::File::create(local_path).is_ok() {
+        (
+            Status::Ok,
+            CreateFileResponse::OkResp(OkResponse { success: true }.into()),
+        )
+    } else {
+        (
+            Status::NotFound,
+            CreateFileResponse::ErrResp(
+                ErrResponse {
+                    exception_type: "IllegalArgumentException".into(),
+                    exception_info: "IllegalArgumentException: path invalid.".into(),
+                }
+                .into(),
+            ),
+        )
+    }
+}

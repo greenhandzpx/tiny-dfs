@@ -1642,6 +1642,7 @@ dependencies = [
  "env_logger",
  "log",
  "once_cell",
+ "rand",
  "reqwest",
  "rocket",
  "tokio",

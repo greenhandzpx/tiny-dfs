@@ -1,7 +1,4 @@
-use rocket::{
-    http::Status,
-    serde::{Deserialize, Serialize},
-};
+use rocket::http::Status;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TinyDfsError {
@@ -43,11 +40,4 @@ impl TinyDfsError {
             }
         }
     }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct ErrResponse {
-    pub exception_type: String,
-    pub exception_info: String,
 }

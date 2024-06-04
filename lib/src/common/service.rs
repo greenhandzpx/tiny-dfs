@@ -2,7 +2,7 @@ use rocket::serde::{json::Json, Deserialize, Serialize};
 
 use crate::naming::Ip;
 
-use super::error::ErrResponse;
+use super::{ErrResponse, OkResponse};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -35,15 +35,9 @@ pub struct DeleteArg {
     pub path: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct DeleteOkResponse {
-    pub success: bool,
-}
-
 #[derive(Responder)]
 pub enum DeleteResponse {
-    OkResp(Json<DeleteOkResponse>),
+    OkResp(Json<OkResponse>),
     ErrResp(Json<ErrResponse>),
 }
 
@@ -53,14 +47,20 @@ pub struct CreateDirectoryArg {
     pub path: String,
 }
 
+#[derive(Responder)]
+pub enum CreateDirectoryResponse {
+    OkResp(Json<OkResponse>),
+    ErrResp(Json<ErrResponse>),
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
-pub struct CreateDirectoryOkResponse {
-    pub success: bool,
+pub struct CreateFileArg {
+    pub path: String,
 }
 
 #[derive(Responder)]
-pub enum CreateDirectoryResponse {
-    OkResp(Json<CreateDirectoryOkResponse>),
+pub enum CreateFileResponse {
+    OkResp(Json<OkResponse>),
     ErrResp(Json<ErrResponse>),
 }

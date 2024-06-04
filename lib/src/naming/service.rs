@@ -4,14 +4,14 @@ use rocket::{http::Status, serde::json::Json};
 
 use crate::{
     common::{
-        error::ErrResponse,
         service::{
-            CreateDirectoryArg, CreateDirectoryOkResponse, CreateDirectoryResponse, DeleteArg,
-            DeleteOkResponse, DeleteResponse, GetStorageArg, GetStorageOkResponse, IsValidPathArg,
+            CreateDirectoryArg, CreateDirectoryResponse, CreateFileArg, CreateFileResponse,
+            DeleteArg, DeleteResponse, GetStorageArg, GetStorageOkResponse, IsValidPathArg,
             IsValidPathResponse,
         },
+        ErrResponse, OkResponse,
     },
-    naming::dir_tree,
+    naming::{dir_tree, server::select_random_server},
 };
 
 use super::server::StorageServer;
@@ -113,7 +113,7 @@ pub async fn delete_file(arg: Json<DeleteArg>) -> (Status, DeleteResponse) {
         }
         (
             Status::Ok,
-            DeleteResponse::OkResp(DeleteOkResponse { success: true }.into()),
+            DeleteResponse::OkResp(OkResponse { success: true }.into()),
         )
     } else {
         // Delete failed
@@ -149,8 +149,55 @@ pub async fn create_directory(arg: Json<CreateDirectoryArg>) -> (Status, CreateD
         Ok(_) => {
             return (
                 Status::Ok,
-                CreateDirectoryResponse::OkResp(CreateDirectoryOkResponse { success: true }.into()),
-            )
+                CreateDirectoryResponse::OkResp(OkResponse { success: true }.into()),
+            );
+        }
+    }
+}
+
+#[post("/create_file", data = "<arg>")]
+pub async fn create_file(arg: Json<CreateFileArg>) -> (Status, CreateFileResponse) {
+    let srv = select_random_server().await;
+    assert!(srv.is_some());
+    match dir_tree::create_file(&arg.path, false, srv, false).await {
+        Err(err) => {
+            let (status, exception_type, exception_info) = err.exception();
+            return (
+                status,
+                CreateFileResponse::ErrResp(
+                    ErrResponse {
+                        exception_type: exception_type.to_string(),
+                        exception_info: exception_info.to_string(),
+                    }
+                    .into(),
+                ),
+            );
+        }
+        Ok(target) => {
+            // Broadcast all storage servers to create this file
+            let mut tasks = Vec::new();
+            target.for_all_servers(|servers| {
+                // TODO: use a more efficient way to inform all servers in parallel
+                for srv in servers {
+                    let arg = CreateFileArg {
+                        path: arg.path.clone(),
+                    };
+                    let client = reqwest::Client::new();
+                    let addr = format!("http://{}:{}/storage_create", srv.ip.0, srv.command_port);
+                    let task = rocket::tokio::spawn(async move {
+                        let resp = client.post(addr).json(&arg).send().await.unwrap();
+                        assert!(resp.status().is_success());
+                    });
+                    tasks.push(task);
+                }
+            });
+            for task in tasks {
+                task.await.unwrap();
+            }
+            return (
+                Status::Ok,
+                CreateFileResponse::OkResp(OkResponse { success: true }.into()),
+            );
         }
     }
 }

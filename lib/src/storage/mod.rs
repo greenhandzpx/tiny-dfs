@@ -8,7 +8,7 @@ use std::{
     sync::atomic::{AtomicU16, Ordering},
 };
 
-use command::delete_file;
+use command::{create_file, delete_file};
 use once_cell::sync::Lazy;
 
 use crate::common::{
@@ -117,7 +117,7 @@ pub async fn start_storage_server(args: &Vec<String>) {
     let command_task = rocket::tokio::spawn(async move {
         rocket::build()
             .configure(command_config)
-            .mount("/", routes![delete_file])
+            .mount("/", routes![delete_file, create_file])
             .launch()
             .await
             .unwrap();

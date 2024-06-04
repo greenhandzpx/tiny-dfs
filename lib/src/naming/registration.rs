@@ -4,8 +4,8 @@ use rocket;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 
-use crate::common::error::ErrResponse;
 use crate::common::registration::{RegisterArg, RegisterOkResponse};
+use crate::common::ErrResponse;
 use crate::naming::Ip;
 
 use super::dir_tree::collect_files;
@@ -36,7 +36,7 @@ pub async fn register_storage_server(arg: Json<RegisterArg>) -> (Status, Registe
             ),
         );
     }
-    let duplicated_files = collect_files(&arg.files, &srv).await.unwrap();
+    let duplicated_files = collect_files(&arg.files, srv).await.unwrap();
     (
         Status::Ok,
         RegisterResponse::OkResp(

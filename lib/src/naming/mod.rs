@@ -7,7 +7,7 @@ mod service;
 
 use registration::register_storage_server;
 use rocket::serde::{Deserialize, Serialize};
-use service::{create_directory, delete_file, get_storage_server, is_valid_path};
+use service::{create_directory, create_file, delete_file, get_storage_server, is_valid_path};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -38,7 +38,8 @@ pub async fn start_naming_server(args: &Vec<String>) {
                     is_valid_path,
                     get_storage_server,
                     delete_file,
-                    create_directory
+                    create_directory,
+                    create_file
                 ],
             )
             // .mount("/test", routes![hello])

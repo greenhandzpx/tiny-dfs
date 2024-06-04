@@ -47,7 +47,12 @@ impl File {
         }
     }
 
-    async fn create_file(&self, child: &str, is_dir: bool, srv: Option<&Arc<StorageServer>>) {
+    async fn create_file(
+        &self,
+        child: &str,
+        is_dir: bool,
+        srv: Option<Arc<StorageServer>>,
+    ) -> Arc<File> {
         match self {
             File::RegFile(_) => panic!(),
             File::Dir(f) => f.create_file(child, is_dir, srv).await,
@@ -62,9 +67,9 @@ pub struct RegFile {
 }
 
 impl RegFile {
-    fn new(name: &str, srv: &Arc<StorageServer>) -> Self {
+    fn new(name: &str, srv: Arc<StorageServer>) -> Self {
         Self {
-            srvs: std::sync::Mutex::new(vec![srv.clone()]),
+            srvs: std::sync::Mutex::new(vec![srv]),
             name: name.to_string(),
         }
     }
@@ -91,13 +96,22 @@ impl Dir {
         self.children.lock().await.remove(child)
     }
 
-    async fn create_file(&self, child: &str, is_dir: bool, srv: Option<&Arc<StorageServer>>) {
+    async fn create_file(
+        &self,
+        child: &str,
+        is_dir: bool,
+        srv: Option<Arc<StorageServer>>,
+    ) -> Arc<File> {
         let file = if is_dir {
             Arc::new(File::Dir(Dir::new(child)))
         } else {
             Arc::new(File::RegFile(RegFile::new(child, srv.unwrap())))
         };
-        self.children.lock().await.insert(child.to_string(), file);
+        self.children
+            .lock()
+            .await
+            .insert(child.to_string(), file.clone());
+        file
     }
 }
 
@@ -144,7 +158,7 @@ async fn walk_dir_tree<F, Fut, T>(
     cb: F,
 ) -> Result<T, TinyDfsError>
 where
-    F: Fn(Option<Arc<File>>, WalkDirTreeTarget) -> Fut,
+    F: FnOnce(Option<Arc<File>>, WalkDirTreeTarget) -> Fut,
     Fut: Future<Output = T>,
 {
     if path.is_empty() || path.chars().nth(0).unwrap() != '/' {
@@ -233,9 +247,9 @@ pub async fn delete_file(path: &str) -> Result<Arc<File>, TinyDfsError> {
 pub async fn create_file(
     path: &str,
     is_dir: bool,
-    srv: Option<&Arc<StorageServer>>,
+    srv: Option<Arc<StorageServer>>,
     create_missing_one: bool,
-) -> Result<(), TinyDfsError> {
+) -> Result<Arc<File>, TinyDfsError> {
     log::debug!(
         "create_file: path {:?}, is_dir {:?}, auto_create {:?}",
         path,
@@ -260,8 +274,7 @@ pub async fn create_file(
                         }
                         WalkDirTreeTarget::Name(name) => {
                             let name = name.unwrap();
-                            parent.create_file(&name, is_dir, srv).await;
-                            return Ok(());
+                            return Ok(parent.create_file(&name, is_dir, srv).await);
                         }
                     }
                 } else {
@@ -277,7 +290,7 @@ pub async fn create_file(
 /// Collect necessary files and retrive all duplicated ones
 pub async fn collect_files(
     files: &Vec<String>,
-    srv: &Arc<StorageServer>,
+    srv: Arc<StorageServer>,
 ) -> Result<Vec<String>, TinyDfsError> {
     let mut duplicated_files: Vec<String> = Vec::new();
     for file in files {
@@ -286,7 +299,7 @@ pub async fn collect_files(
             duplicated_files.push(file.clone());
             continue;
         }
-        create_file(&file, false, Some(srv), true).await?;
+        create_file(&file, false, Some(srv.clone()), true).await?;
     }
     Ok(duplicated_files)
 }

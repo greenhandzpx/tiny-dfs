@@ -11,10 +11,11 @@ use crate::{
         },
         ErrResponse, OkResponse,
     },
-    naming::{dir_tree, server::select_random_server},
+    naming::{
+        dir_tree,
+        server::{select_random_server, StorageServer},
+    },
 };
-
-use super::server::StorageServer;
 
 #[post("/is_valid_path", data = "<arg>")]
 pub async fn is_valid_path(arg: Json<IsValidPathArg>) -> (Status, Json<IsValidPathResponse>) {

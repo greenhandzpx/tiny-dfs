@@ -1,13 +1,12 @@
 //! Code of naming server
 
+mod api;
 mod dir_tree;
-mod registration;
 mod server;
-mod service;
 
-use registration::register_storage_server;
+use api::registration::register_storage_server;
+use api::service::{create_directory, create_file, delete_file, get_storage_server, is_valid_path};
 use rocket::serde::{Deserialize, Serialize};
-use service::{create_directory, create_file, delete_file, get_storage_server, is_valid_path};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]

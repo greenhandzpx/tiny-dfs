@@ -6,10 +6,9 @@ use rocket::serde::json::Json;
 
 use crate::common::registration::{RegisterArg, RegisterOkResponse};
 use crate::common::ErrResponse;
+use crate::naming::dir_tree::collect_files;
+use crate::naming::server::{register_server, StorageServer};
 use crate::naming::Ip;
-
-use super::dir_tree::collect_files;
-use super::server::{self, StorageServer};
 
 #[derive(Responder)]
 pub enum RegisterResponse {
@@ -24,7 +23,7 @@ pub async fn register_storage_server(arg: Json<RegisterArg>) -> (Status, Registe
         arg.client_port,
         arg.command_port,
     ));
-    if server::register_server(&srv).await.is_err() {
+    if register_server(&srv).await.is_err() {
         return (
             Status::Conflict,
             RegisterResponse::ErrResp(

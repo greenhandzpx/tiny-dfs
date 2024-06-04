@@ -1,20 +1,21 @@
 //! Code of storage server
 
-mod command;
+mod api;
 mod path;
 
 use std::{
-    fs,
+    fs, io,
+    path::Path,
     sync::atomic::{AtomicU16, Ordering},
 };
 
-use command::{create_file, delete_file};
 use once_cell::sync::Lazy;
 
 use crate::common::{
     error::TinyDfsError,
     registration::{RegisterArg, RegisterOkResponse},
 };
+use api::command::{create_file, delete_file};
 
 static CLIENT_PORT: Lazy<AtomicU16> = Lazy::new(|| AtomicU16::new(0));
 static COMMAND_PORT: Lazy<AtomicU16> = Lazy::new(|| AtomicU16::new(0));
@@ -22,30 +23,38 @@ static COMMAND_PORT: Lazy<AtomicU16> = Lazy::new(|| AtomicU16::new(0));
 const SERVER_IP: &str = "localhost";
 const NAMING_SERVER_IP: &str = "localhost";
 
+fn traverse_dir(dir: &Path, files: &mut Vec<String>) -> io::Result<()> {
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            traverse_dir(&path, files)?;
+        } else {
+            let global_path = path::local_to_global(path.to_str().unwrap());
+            log::debug!("{}: send path {:?}", line!(), path.as_os_str());
+            log::debug!("{}: send global path {:?}", line!(), global_path);
+            files.push(global_path.to_string());
+        }
+    }
+    Ok(())
+}
+
 async fn regsiter_myself(registration_port: u16) -> Result<(), TinyDfsError> {
     // Collect all local files
     let mut files: Vec<String> = Vec::new();
+
     let local_dir = path::global_to_local("/");
-    let entries = fs::read_dir(local_dir.as_str()).or(Err(TinyDfsError::DirReadErr))?;
+    let local_dir = Path::new(&local_dir);
 
-    for entry in entries {
-        let path = entry.or(Err(TinyDfsError::DirReadErr))?.path();
-        log::debug!("{}: send path {:?}", line!(), path.as_os_str());
-        // Convert to local path
-        let global_path = path::local_to_global(path.to_str().unwrap());
-        // let relative_path = &path.to_str().unwrap().to_string()[local_dir.len()..];
-        log::debug!("{}: send relative path {:?}", line!(), global_path);
-        files.push(global_path.to_string());
-    }
+    traverse_dir(local_dir, &mut files).or(Err(TinyDfsError::DirReadErr))?;
 
+    // Send registration request
     let arg = RegisterArg {
         storage_ip: SERVER_IP.to_string(),
         client_port: CLIENT_PORT.load(Ordering::Relaxed),
         command_port: COMMAND_PORT.load(Ordering::Relaxed),
         files,
     };
-
-    // Send registration request
     let client = reqwest::Client::new();
     let addr = format!("http://{}:{}/register", NAMING_SERVER_IP, registration_port);
     log::debug!("addr {:?}", addr);

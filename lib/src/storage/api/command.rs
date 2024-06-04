@@ -16,6 +16,7 @@ pub fn delete_file(arg: Json<DeleteArg>) -> (Status, DeleteResponse) {
     let local_path = path::global_to_local(global_path);
 
     log::info!("delete_file: local path {:?}", local_path);
+    // todo!("delete empty directory");
     if fs::remove_file(local_path).is_ok() {
         (
             Status::Ok,

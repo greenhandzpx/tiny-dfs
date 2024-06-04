@@ -1,15 +1,19 @@
+use std::sync::Arc;
+
 use rocket::{http::Status, serde::json::Json};
 
 use crate::{
     common::{
         error::ErrResponse,
         service::{
-            DeleteArg, DeleteOkResponse, GetStorageArg, GetStorageOkResponse, IsValidPathArg,
-            IsValidPathResponse,
+            DeleteArg, DeleteOkResponse, DeleteResponse, GetStorageArg, GetStorageOkResponse,
+            IsValidPathArg, IsValidPathResponse,
         },
     },
     naming::dir_tree,
 };
+
+use super::server::StorageServer;
 
 #[post("/is_valid_path", data = "<arg>")]
 pub async fn is_valid_path(arg: Json<IsValidPathArg>) -> (Status, Json<IsValidPathResponse>) {
@@ -32,11 +36,16 @@ pub enum GetStorageResponse {
     ErrResp(Json<ErrResponse>),
 }
 
+/// TODO: achieve load-balancing
+fn select_one_server(srvs: &mut Vec<Arc<StorageServer>>) -> Arc<StorageServer> {
+    srvs[0].clone()
+}
+
 #[post("/getstorage", data = "<arg>")]
 pub async fn get_storage_server(arg: Json<GetStorageArg>) -> (Status, GetStorageResponse) {
     let (_, target) = dir_tree::lookup(&arg.path).await;
     if let Some(target) = target {
-        let srv = target.server_ref();
+        let srv = target.for_all_servers(select_one_server);
         (
             Status::Ok,
             GetStorageResponse::OkResp(
@@ -62,22 +71,37 @@ pub async fn get_storage_server(arg: Json<GetStorageArg>) -> (Status, GetStorage
     }
 }
 
-#[derive(Responder)]
-pub enum DeleteResponse {
-    OkResp(Json<DeleteOkResponse>),
-    ErrResp(Json<ErrResponse>),
-}
-
 #[post("/delete", data = "<arg>")]
 pub async fn delete_file(arg: Json<DeleteArg>) -> (Status, DeleteResponse) {
-    if dir_tree::delete_file(&arg.path).await.is_err() {
+    if let Some(target) = dir_tree::delete_file(&arg.path).await.ok() {
+        // TODO: inform the storage server periodically
+        // Broadcast all storage servers to delete this file
+        let mut tasks = Vec::new();
+        target.for_all_servers(|servers| {
+            // TODO: use a more efficient way to inform all servers in parallel
+            for srv in servers {
+                let arg = DeleteArg {
+                    path: arg.path.clone(),
+                };
+                let client = reqwest::Client::new();
+                let addr = format!("http://{}:{}/storage_delete", srv.ip.0, srv.command_port);
+                let task = rocket::tokio::spawn(async move {
+                    let resp = client.post(addr).json(&arg).send().await.unwrap();
+                    assert!(resp.status().is_success());
+                });
+                tasks.push(task);
+            }
+        });
+        for task in tasks {
+            task.await.unwrap();
+        }
         (
             Status::Ok,
             DeleteResponse::OkResp(DeleteOkResponse { success: true }.into()),
         )
     } else {
         // Delete failed
-        return (
+        (
             Status::NotFound,
             DeleteResponse::ErrResp(
                 ErrResponse {
@@ -86,6 +110,6 @@ pub async fn delete_file(arg: Json<DeleteArg>) -> (Status, DeleteResponse) {
                 }
                 .into(),
             ),
-        );
+        )
     }
 }

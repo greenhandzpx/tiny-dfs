@@ -11,7 +11,7 @@ use service::{delete_file, get_storage_server, is_valid_path};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
-pub struct Ip(String);
+pub struct Ip(pub String);
 
 /// args[2]: service port;
 /// args[3]: registration port

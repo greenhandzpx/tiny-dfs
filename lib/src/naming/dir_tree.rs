@@ -20,9 +20,15 @@ impl File {
         }
     }
 
-    pub fn server_ref(&self) -> &Arc<StorageServer> {
+    pub fn for_all_servers<F, T>(&self, mut func: F) -> T
+    where
+        F: FnMut(&mut Vec<Arc<StorageServer>>) -> T,
+    {
         match self {
-            File::RegFile(f) => &f.srv,
+            File::RegFile(f) => {
+                let mut servers = f.srvs.lock().unwrap();
+                func(&mut servers)
+            }
             File::Dir(_) => panic!(),
         }
     }
@@ -34,7 +40,7 @@ impl File {
         }
     }
 
-    async fn delete_file(&self, child: &str) {
+    async fn delete_file(&self, child: &str) -> Option<Arc<File>> {
         match self {
             File::RegFile(_) => panic!(),
             File::Dir(f) => f.delete_file(child).await,
@@ -50,14 +56,15 @@ impl File {
 }
 
 pub struct RegFile {
-    srv: Arc<StorageServer>,
+    /// Several servers may own this file
+    srvs: std::sync::Mutex<Vec<Arc<StorageServer>>>,
     name: String,
 }
 
 impl RegFile {
     fn new(name: &str, srv: &Arc<StorageServer>) -> Self {
         Self {
-            srv: srv.clone(),
+            srvs: std::sync::Mutex::new(vec![srv.clone()]),
             name: name.to_string(),
         }
     }
@@ -80,8 +87,8 @@ impl Dir {
         self.children.lock().await.get(child).cloned()
     }
 
-    async fn delete_file(&self, child: &str) {
-        self.children.lock().await.remove(child);
+    async fn delete_file(&self, child: &str) -> Option<Arc<File>> {
+        self.children.lock().await.remove(child)
     }
 
     async fn create_file(&self, child: &str, is_dir: bool, srv: Option<&Arc<StorageServer>>) {
@@ -107,6 +114,7 @@ struct WalkDirTreeOption {
 
 enum WalkDirTreeTarget {
     Some(Arc<File>),
+    /// Target name
     Name(Option<String>),
 }
 
@@ -188,7 +196,7 @@ pub async fn lookup(path: &str) -> (Option<Arc<File>>, Option<Arc<File>>) {
     .await
 }
 
-pub async fn delete_file(path: &str) -> Result<(), TinyDfsError> {
+pub async fn delete_file(path: &str) -> Result<Arc<File>, TinyDfsError> {
     log::debug!("delete_file: path {:?}", path,);
     walk_dir_tree(
         path,
@@ -197,8 +205,8 @@ pub async fn delete_file(path: &str) -> Result<(), TinyDfsError> {
             if let Some(parent) = parent {
                 match target {
                     WalkDirTreeTarget::Some(target) => {
-                        parent.delete_file(target.name()).await;
-                        return Ok(());
+                        let child = parent.delete_file(target.name()).await;
+                        return Ok(child.unwrap());
                     }
                     WalkDirTreeTarget::Name(_) => return Err(TinyDfsError::FileNotFound),
                 }

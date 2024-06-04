@@ -1,12 +1,15 @@
 //! Code of storage server
 
+mod command;
+mod path;
+
 use std::{
     fs,
     sync::atomic::{AtomicU16, Ordering},
 };
 
+use command::delete_file;
 use once_cell::sync::Lazy;
-use rocket::tokio::sync::RwLock;
 
 use crate::common::{
     error::TinyDfsError,
@@ -15,7 +18,6 @@ use crate::common::{
 
 static CLIENT_PORT: Lazy<AtomicU16> = Lazy::new(|| AtomicU16::new(0));
 static COMMAND_PORT: Lazy<AtomicU16> = Lazy::new(|| AtomicU16::new(0));
-static LOCAL_DIR: Lazy<RwLock<String>> = Lazy::new(|| RwLock::new(String::new()));
 
 const SERVER_IP: &str = "localhost";
 const NAMING_SERVER_IP: &str = "localhost";
@@ -23,16 +25,17 @@ const NAMING_SERVER_IP: &str = "localhost";
 async fn regsiter_myself(registration_port: u16) -> Result<(), TinyDfsError> {
     // Collect all local files
     let mut files: Vec<String> = Vec::new();
-    let local_dir = LOCAL_DIR.read().await;
+    let local_dir = path::global_to_local("/");
     let entries = fs::read_dir(local_dir.as_str()).or(Err(TinyDfsError::DirReadErr))?;
 
     for entry in entries {
         let path = entry.or(Err(TinyDfsError::DirReadErr))?.path();
         log::debug!("{}: send path {:?}", line!(), path.as_os_str());
-        // Convert to relative path
-        let relative_path = &path.to_str().unwrap().to_string()[local_dir.len()..];
-        log::debug!("{}: send relative path {:?}", line!(), relative_path);
-        files.push(relative_path.to_string());
+        // Convert to local path
+        let global_path = path::local_to_global(path.to_str().unwrap());
+        // let relative_path = &path.to_str().unwrap().to_string()[local_dir.len()..];
+        log::debug!("{}: send relative path {:?}", line!(), global_path);
+        files.push(global_path.to_string());
     }
 
     let arg = RegisterArg {
@@ -41,8 +44,6 @@ async fn regsiter_myself(registration_port: u16) -> Result<(), TinyDfsError> {
         command_port: COMMAND_PORT.load(Ordering::Relaxed),
         files,
     };
-
-    // return Ok(());
 
     // Send registration request
     let client = reqwest::Client::new();
@@ -65,10 +66,10 @@ async fn regsiter_myself(registration_port: u16) -> Result<(), TinyDfsError> {
     let duplicated_files = resp.files;
     for file in duplicated_files {
         log::info!("{}: remove relative path {}", line!(), file);
-        let path = local_dir.to_string() + &file;
+        // let path = local_dir.to_string() + &file;
+        let path = path::global_to_local(&file);
         log::info!("{}: remove path {}", line!(), path);
-
-        // fs::remove_file(file).unwrap();
+        fs::remove_file(file).unwrap();
     }
     Ok(())
 }
@@ -88,7 +89,8 @@ pub async fn start_storage_server(args: &Vec<String>) {
 
     CLIENT_PORT.store(client_port, Ordering::Relaxed);
     COMMAND_PORT.store(command_port, Ordering::Relaxed);
-    *LOCAL_DIR.write().await = local_dir;
+    path::set_local_dir(local_dir);
+    // *path::local_dir().write().await = local_dir;
 
     if let Some(err) = regsiter_myself(registration_port).await.err() {
         log::error!("register failed, err {:?}", err);
@@ -107,7 +109,6 @@ pub async fn start_storage_server(args: &Vec<String>) {
     let client_task = rocket::tokio::spawn(async move {
         rocket::build()
             .configure(client_config)
-            // .mount("")
             .launch()
             .await
             .unwrap();
@@ -116,6 +117,7 @@ pub async fn start_storage_server(args: &Vec<String>) {
     let command_task = rocket::tokio::spawn(async move {
         rocket::build()
             .configure(command_config)
+            .mount("/", routes![delete_file])
             .launch()
             .await
             .unwrap();

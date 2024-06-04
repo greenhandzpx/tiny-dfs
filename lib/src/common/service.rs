@@ -1,6 +1,8 @@
-use rocket::serde::{Deserialize, Serialize};
+use rocket::serde::{json::Json, Deserialize, Serialize};
 
 use crate::naming::Ip;
+
+use super::error::ErrResponse;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -37,4 +39,10 @@ pub struct DeleteArg {
 #[serde(crate = "rocket::serde")]
 pub struct DeleteOkResponse {
     pub success: bool,
+}
+
+#[derive(Responder)]
+pub enum DeleteResponse {
+    OkResp(Json<DeleteOkResponse>),
+    ErrResp(Json<ErrResponse>),
 }

@@ -9,10 +9,13 @@ pub enum TinyDfsError {
     DirReadErr,
     RegisterFailed,
     PathInvalid,
+    IndexOutOfBound,
+    IOInterrupted,
     // TODO
 }
 
 impl TinyDfsError {
+    /// Return (status, exception type, exception info)
     pub fn exception(&self) -> (Status, &'static str, &'static str) {
         match self {
             TinyDfsError::StorageServerExists => (
@@ -38,6 +41,12 @@ impl TinyDfsError {
             TinyDfsError::PathInvalid => {
                 (Status::NotFound, "IllegalArgumentException", "path invalid")
             }
+            TinyDfsError::IndexOutOfBound => (
+                Status::NotFound,
+                "IndexOutOfBoundsException",
+                "index out of bound of the file ",
+            ),
+            TinyDfsError::IOInterrupted => (Status::NotFound, "IOException", "IO interrupted"),
         }
     }
 }

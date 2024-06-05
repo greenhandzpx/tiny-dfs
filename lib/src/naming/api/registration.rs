@@ -4,11 +4,15 @@ use rocket;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 
-use crate::common::registration::{RegisterArg, RegisterOkResponse};
-use crate::common::ErrResponse;
-use crate::naming::dir_tree::collect_files;
-use crate::naming::server::{register_server, StorageServer};
-use crate::naming::Ip;
+use crate::common::{
+    registration::{RegisterArg, RegisterOkResponse},
+    ErrResponse,
+};
+use crate::naming::{
+    dir_tree::collect_files,
+    server::{register_server, StorageServer},
+    Ip,
+};
 
 #[derive(Responder)]
 pub enum RegisterResponse {

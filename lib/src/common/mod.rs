@@ -3,6 +3,7 @@ use rocket::serde::{Deserialize, Serialize};
 pub mod error;
 pub mod registration;
 pub mod service;
+pub mod storage;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]

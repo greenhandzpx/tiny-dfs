@@ -1639,6 +1639,7 @@ dependencies = [
 name = "tiny_dfs"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "env_logger",
  "log",
  "once_cell",

@@ -15,7 +15,10 @@ use crate::common::{
     error::TinyDfsError,
     registration::{RegisterArg, RegisterOkResponse},
 };
-use api::command::{create_file, delete_file};
+use api::{
+    command::{create_file, delete_file},
+    storage::{get_size, read_file, write_file},
+};
 
 static CLIENT_PORT: Lazy<AtomicU16> = Lazy::new(|| AtomicU16::new(0));
 static COMMAND_PORT: Lazy<AtomicU16> = Lazy::new(|| AtomicU16::new(0));
@@ -118,6 +121,7 @@ pub async fn start_storage_server(args: &Vec<String>) {
     let client_task = rocket::tokio::spawn(async move {
         rocket::build()
             .configure(client_config)
+            .mount("/", routes![get_size, read_file, write_file])
             .launch()
             .await
             .unwrap();

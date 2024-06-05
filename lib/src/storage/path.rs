@@ -19,3 +19,7 @@ pub fn global_to_local(global_path: &str) -> String {
 pub fn local_to_global<'a>(local_path: &'a str) -> &'a str {
     &local_path[unsafe { LOCAL_DIR.len() }..]
 }
+
+pub fn path_is_invalid(path: &str) -> bool {
+    path.is_empty() || path.chars().nth(0).unwrap() != '/'
+}

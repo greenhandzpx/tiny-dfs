@@ -17,3 +17,9 @@ pub struct ErrResponse {
 pub struct OkResponse {
     pub success: bool,
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct PathArg {
+    pub path: String,
+}

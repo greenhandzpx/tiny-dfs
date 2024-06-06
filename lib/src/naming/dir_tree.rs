@@ -58,6 +58,13 @@ impl File {
             File::Dir(f) => f.create_file(child, is_dir, srv).await,
         }
     }
+
+    pub async fn list(&self) -> Vec<String> {
+        match self {
+            File::RegFile(_) => panic!(),
+            File::Dir(f) => f.list().await,
+        }
+    }
 }
 
 pub struct RegFile {
@@ -112,6 +119,15 @@ impl Dir {
             .await
             .insert(child.to_string(), file.clone());
         file
+    }
+
+    async fn list(&self) -> Vec<String> {
+        self.children
+            .lock()
+            .await
+            .iter()
+            .map(|kv| kv.0.clone())
+            .collect()
     }
 }
 

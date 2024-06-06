@@ -5,13 +5,9 @@ use base64::{
 };
 use rocket::serde::{json::Json, Deserialize, Serialize};
 
-use super::{ErrResponse, OkResponse};
+use super::{ErrResponse, OkResponse, PathArg};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct SizeArg {
-    pub path: String,
-}
+pub type SizeArg = PathArg;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]

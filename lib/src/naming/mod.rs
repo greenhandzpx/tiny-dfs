@@ -5,7 +5,10 @@ mod dir_tree;
 mod server;
 
 use api::registration::register_storage_server;
-use api::service::{create_directory, create_file, delete_file, get_storage_server, is_valid_path};
+use api::service::{
+    create_directory, create_file, delete_file, get_storage_server, is_directory, is_valid_path,
+    list_dir,
+};
 use rocket::serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Deserialize, Serialize)]
@@ -38,7 +41,9 @@ pub async fn start_naming_server(args: &Vec<String>) {
                     get_storage_server,
                     delete_file,
                     create_directory,
-                    create_file
+                    create_file,
+                    list_dir,
+                    is_directory,
                 ],
             )
             // .mount("/test", routes![hello])

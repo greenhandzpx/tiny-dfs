@@ -2,13 +2,9 @@ use rocket::serde::{json::Json, Deserialize, Serialize};
 
 use crate::naming::Ip;
 
-use super::{ErrResponse, OkResponse};
+use super::{ErrResponse, OkResponse, PathArg};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct IsValidPathArg {
-    pub path: String,
-}
+pub type IsValidPathArg = PathArg;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -16,11 +12,7 @@ pub struct IsValidPathResponse {
     pub success: bool,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct GetStorageArg {
-    pub path: String,
-}
+pub type GetStorageArg = PathArg;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -29,11 +21,7 @@ pub struct GetStorageOkResponse {
     pub server_port: u16,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct DeleteArg {
-    pub path: String,
-}
+pub type DeleteArg = PathArg;
 
 #[derive(Responder)]
 pub enum DeleteResponse {
@@ -41,11 +29,7 @@ pub enum DeleteResponse {
     ErrResp(Json<ErrResponse>),
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct CreateDirectoryArg {
-    pub path: String,
-}
+pub type CreateDirectoryArg = PathArg;
 
 #[derive(Responder)]
 pub enum CreateDirectoryResponse {
@@ -53,14 +37,32 @@ pub enum CreateDirectoryResponse {
     ErrResp(Json<ErrResponse>),
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct CreateFileArg {
-    pub path: String,
-}
+pub type CreateFileArg = PathArg;
 
 #[derive(Responder)]
 pub enum CreateFileResponse {
+    OkResp(Json<OkResponse>),
+    ErrResp(Json<ErrResponse>),
+}
+
+pub type ListArg = PathArg;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct ListOkResponse {
+    pub files: Vec<String>,
+}
+
+#[derive(Responder)]
+pub enum ListResponse {
+    OkResp(Json<ListOkResponse>),
+    ErrResp(Json<ErrResponse>),
+}
+
+pub type IsDirectoryArg = PathArg;
+
+#[derive(Responder)]
+pub enum IsDirectoryResponse {
     OkResp(Json<OkResponse>),
     ErrResp(Json<ErrResponse>),
 }

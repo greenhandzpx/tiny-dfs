@@ -1,13 +1,16 @@
 use std::sync::Arc;
 
+use rand::Rng;
 use rocket::{http::Status, serde::json::Json};
 
 use crate::{
     common::{
+        error::TinyDfsError,
         service::{
             CreateDirectoryArg, CreateDirectoryResponse, CreateFileArg, CreateFileResponse,
-            DeleteArg, DeleteResponse, GetStorageArg, GetStorageOkResponse, IsValidPathArg,
-            IsValidPathResponse,
+            DeleteArg, DeleteResponse, GetStorageArg, GetStorageOkResponse, IsDirectoryArg,
+            IsDirectoryResponse, IsValidPathArg, IsValidPathResponse, ListArg, ListOkResponse,
+            ListResponse,
         },
         ErrResponse, OkResponse,
     },
@@ -42,7 +45,9 @@ pub enum GetStorageResponse {
 
 /// TODO: achieve load-balancing
 fn select_one_server(srvs: &mut Vec<Arc<StorageServer>>) -> Arc<StorageServer> {
-    srvs[0].clone()
+    let mut rng = rand::thread_rng();
+    let idx = rng.gen_range(0..srvs.len());
+    srvs[idx].clone()
 }
 
 #[post("/getstorage", data = "<arg>")]
@@ -200,5 +205,71 @@ pub async fn create_file(arg: Json<CreateFileArg>) -> (Status, CreateFileRespons
                 CreateFileResponse::OkResp(OkResponse { success: true }.into()),
             );
         }
+    }
+}
+
+#[post("/list", data = "<arg>")]
+pub async fn list_dir(arg: Json<ListArg>) -> (Status, ListResponse) {
+    let err_ret = |err: TinyDfsError| {
+        let (status, etype, einfo) = err.exception();
+        (
+            status,
+            ListResponse::ErrResp(
+                ErrResponse {
+                    exception_info: einfo.to_string(),
+                    exception_type: etype.to_string(),
+                }
+                .into(),
+            ),
+        )
+    };
+    let res = dir_tree::lookup(&arg.path).await;
+    if res.is_err() {
+        return err_ret(TinyDfsError::PathInvalid);
+    }
+    let (_, target) = res.unwrap();
+    if let Some(dir) = target {
+        let files = dir.list().await;
+        (
+            Status::Ok,
+            ListResponse::OkResp(ListOkResponse { files }.into()),
+        )
+    } else {
+        err_ret(TinyDfsError::FileNotFound)
+    }
+}
+
+#[post("/is_directory", data = "<arg>")]
+pub async fn is_directory(arg: Json<IsDirectoryArg>) -> (Status, IsDirectoryResponse) {
+    let err_ret = |err: TinyDfsError| {
+        let (status, etype, einfo) = err.exception();
+        (
+            status,
+            IsDirectoryResponse::ErrResp(
+                ErrResponse {
+                    exception_info: einfo.to_string(),
+                    exception_type: etype.to_string(),
+                }
+                .into(),
+            ),
+        )
+    };
+    let res = dir_tree::lookup(&arg.path).await;
+    if res.is_err() {
+        return err_ret(TinyDfsError::PathInvalid);
+    }
+    let (_, target) = res.unwrap();
+    if let Some(target) = target {
+        let is_dir: bool;
+        match target.as_ref() {
+            dir_tree::File::RegFile(_) => is_dir = false,
+            dir_tree::File::Dir(_) => is_dir = true,
+        };
+        (
+            Status::Ok,
+            IsDirectoryResponse::OkResp(OkResponse { success: is_dir }.into()),
+        )
+    } else {
+        err_ret(TinyDfsError::FileNotFound)
     }
 }

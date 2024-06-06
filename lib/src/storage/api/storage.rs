@@ -132,7 +132,10 @@ pub fn write_file(arg: Json<WriteArg>) -> (Status, WriteResponse) {
 
     log::info!("write_file: local path {:?}", local_path);
 
-    let file = fs::OpenOptions::new().read(true).write(true).open(local_path);
+    let file = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(local_path);
     if file.is_err() {
         log::warn!("write_file:{}: file not found", line!());
         return err_ret(TinyDfsError::FileNotFound);

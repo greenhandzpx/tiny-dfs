@@ -1,4 +1,11 @@
-use tiny_dfs::common::{service::{CreateDirectoryArg, CreateFileArg, DeleteArg, GetStorageArg, GetStorageOkResponse, IsValidPathArg, IsValidPathResponse}, storage::{base64_decode, base64_encode, ReadArg, ReadOkResponse, WriteArg}, ErrResponse, OkResponse};
+use tiny_dfs::common::{
+    service::{
+        CreateDirectoryArg, CreateFileArg, DeleteArg, GetStorageArg, GetStorageOkResponse,
+        IsValidPathArg, IsValidPathResponse,
+    },
+    storage::{base64_decode, base64_encode, ReadArg, ReadOkResponse, WriteArg},
+    ErrResponse, OkResponse,
+};
 
 mod common;
 
@@ -16,7 +23,6 @@ async fn test_read_write() {
     let create_dir = "/test886";
     let create_file = "/test886/test888";
 
-
     log::info!("start to delete file...");
     let arg = DeleteArg {
         path: create_file.to_string(),
@@ -24,14 +30,12 @@ async fn test_read_write() {
     let addr = format!("http://localhost:{}/delete", service_port);
     let _resp = client.post(addr).json(&arg).send().await.unwrap();
 
-
     log::info!("start to create dir...");
     let arg = CreateDirectoryArg {
         path: create_dir.to_string(),
     };
     let addr = format!("http://localhost:{}/create_directory", service_port);
     let _resp = client.post(addr).json(&arg).send().await.unwrap();
-
 
     log::info!("start to create file...");
     let arg = CreateFileArg {
@@ -49,7 +53,6 @@ async fn test_read_write() {
     let resp: OkResponse = resp.json().await.unwrap();
     assert!(resp.success);
 
-
     log::info!("start to verify path...");
     // Verify that the file has been deleted in the naming server
     let arg = IsValidPathArg {
@@ -61,7 +64,6 @@ async fn test_read_write() {
     let resp: IsValidPathResponse = resp.json().await.unwrap();
     assert!(resp.success);
 
-
     log::info!("start to get storage...");
     let arg = GetStorageArg {
         path: create_file.to_string(),
@@ -72,7 +74,6 @@ async fn test_read_write() {
     let resp: GetStorageOkResponse = resp.json().await.unwrap();
     assert!(resp.server_port == client_port);
     let storage_port = resp.server_port;
-
 
     log::info!("start to write file...");
     let data = "hello world!!!";
@@ -93,7 +94,6 @@ async fn test_read_write() {
     let resp: OkResponse = resp.json().await.unwrap();
     assert!(resp.success);
 
-
     log::info!("start to read file...");
     let arg = ReadArg {
         path: create_file.to_string(),
@@ -112,6 +112,4 @@ async fn test_read_write() {
     assert!(resp.data.eq(&encoded));
     let decoded = base64_decode(resp.data).unwrap();
     log::info!("read data {:?}", String::from_utf8(decoded).unwrap());
-
-
 }

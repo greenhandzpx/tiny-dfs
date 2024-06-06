@@ -132,12 +132,14 @@ pub fn write_file(arg: Json<WriteArg>) -> (Status, WriteResponse) {
 
     log::info!("write_file: local path {:?}", local_path);
 
-    let file = fs::File::open(local_path);
+    let file = fs::OpenOptions::new().read(true).write(true).open(local_path);
     if file.is_err() {
+        log::warn!("write_file:{}: file not found", line!());
         return err_ret(TinyDfsError::FileNotFound);
     }
     let mut file = file.unwrap();
     if file.seek(SeekFrom::Start(arg.offset)).is_err() {
+        log::warn!("write_file:{}: seek failed", line!());
         return err_ret(TinyDfsError::IndexOutOfBound);
     }
     let decoded = base64_decode(&arg.data).unwrap();
@@ -147,6 +149,7 @@ pub fn write_file(arg: Json<WriteArg>) -> (Status, WriteResponse) {
             ErrorKind::Interrupted => TinyDfsError::IOInterrupted,
             _ => TinyDfsError::FileNotFound,
         };
+        log::warn!("write_file:{}: write err, kind {:?}", line!(), err.kind());
         return err_ret(resp_err);
     } else {
         (
